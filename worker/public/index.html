@@ -602,13 +602,14 @@
           await setupLocalCaptcha('Cloudflare 验证未完成，请使用本地验证');
           throw new Error('请完成本地验证后再登录');
         }
-        await api('/api/auth/login', {
+        const result = await api('/api/auth/login', {
           method: 'POST',
           body: JSON.stringify(useLocalCaptcha ? body : { ...body, turnstileToken })
         });
         $('#loginPassword').value = '';
         $('#captchaAnswer').value = '';
         resetTurnstile();
+        showDashboardLoading(result.account || body.account);
         await loadDashboard();
       } catch (error) {
         notice($('#authNotice'), false, error.message);
@@ -626,6 +627,20 @@
         notice($('#authNotice'), false, error.message);
       });
     };
+
+    function showDashboardLoading(account) {
+      $('#auth').classList.add('hidden');
+      $('#dashboard').classList.remove('hidden');
+      $('#displayName').textContent = account || '正在读取...';
+      $('#taskSummary').classList.remove('active');
+      $('#taskSummaryBadge').textContent = '读取中';
+      $('#taskSummaryDetail').textContent = '登录成功，正在加载你的定时任务...';
+      $('#scheduleStatus').textContent = '正在读取...';
+      $('#history').className = 'history muted';
+      $('#history').textContent = '正在读取...';
+      updateCooldownButtons();
+      window.scrollTo(0, 0);
+    }
 
     async function loadDashboard() {
       try {
