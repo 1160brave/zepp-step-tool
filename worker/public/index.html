@@ -136,10 +136,20 @@
       display: grid;
       justify-items: center;
       margin-top: 18px;
-      min-height: 65px;
+      min-height: 92px;
+      overflow: hidden;
     }
     .turnstile-wrap.hidden {
       min-height: 0;
+    }
+    #turnstileWidget {
+      width: 300px;
+      max-width: 100%;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+    #turnstileWidget iframe {
+      max-width: 100%;
     }
     .turnstile-tip {
       margin-top: 8px;
@@ -200,6 +210,18 @@
       .row { align-items: stretch; flex-direction: column; gap: 0; }
       .topbar { align-items: flex-start; }
       .card { padding: 20px; }
+    }
+    @media (max-width: 380px) {
+      .turnstile-wrap {
+        min-height: 86px;
+      }
+      #turnstileWidget {
+        transform: scale(clamp(.82, calc((100vw - 76px) / 300), 1));
+        transform-origin: top center;
+      }
+      .turnstile-tip {
+        margin-top: -2px;
+      }
     }
   </style>
 </head>
@@ -401,6 +423,7 @@
         turnstileWidgetId = window.turnstile.render('#turnstileWidget', {
           sitekey: turnstileSiteKey,
           theme: 'dark',
+          size: 'normal',
           callback: (token) => { turnstileToken = token; },
           'expired-callback': () => { turnstileToken = ''; },
           'error-callback': () => { turnstileToken = ''; }
