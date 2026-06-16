@@ -161,6 +161,9 @@
       overflow: hidden;
       border-radius: 10px;
     }
+    #turnstileWidget.compact {
+      width: 150px;
+    }
     #turnstileWidget iframe {
       max-width: 100%;
     }
@@ -224,16 +227,12 @@
       .topbar { align-items: flex-start; }
       .card { padding: 20px; }
     }
-    @media (max-width: 380px) {
+    @media (max-width: 430px) {
       .turnstile-wrap {
-        min-height: 86px;
-      }
-      #turnstileWidget {
-        transform: scale(clamp(.82, calc((100vw - 76px) / 300), 1));
-        transform-origin: top center;
+        min-height: 166px;
       }
       .turnstile-tip {
-        margin-top: -2px;
+        margin-top: 8px;
       }
     }
   </style>
@@ -438,13 +437,22 @@
       wrap.classList.remove('hidden');
       await loadTurnstileScript();
       if (turnstileWidgetId === null) {
+        const compact = window.matchMedia('(max-width: 430px)').matches;
+        $('#turnstileWidget').classList.toggle('compact', compact);
         turnstileWidgetId = window.turnstile.render('#turnstileWidget', {
           sitekey: turnstileSiteKey,
           theme: 'dark',
-          size: 'normal',
+          size: compact ? 'compact' : 'normal',
           callback: (token) => { turnstileToken = token; },
           'expired-callback': () => { turnstileToken = ''; },
-          'error-callback': () => { turnstileToken = ''; }
+          'error-callback': () => {
+            turnstileToken = '';
+            notice($('#authNotice'), false, '人机验证失败，请刷新页面后重试');
+          },
+          'timeout-callback': () => {
+            turnstileToken = '';
+            notice($('#authNotice'), false, '人机验证超时，请刷新页面后重试');
+          }
         });
       }
     }
