@@ -1,0 +1,19 @@
+{
+  "accounts": [
+    {
+      "user": "13800138000",
+      "password": "your_password_here",
+      "steps": null
+    },
+    {
+      "user": "user2@example.com",
+      "password": "your_password_here",
+      "steps": [25000, 50000]
+    },
+    {
+      "user": "13900139000",
+      "password": "your_password_here",
+      "steps": 30000
+    }
+  ]
+}

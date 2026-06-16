@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ZeppLife Steps</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050706;
+      --card: #101411;
+      --soft: #151b17;
+      --line: #29332c;
+      --text: #edf7ef;
+      --muted: #93a39a;
+      --green: #22c55e;
+      --green-soft: #22c55e1a;
+      --red: #fb7185;
+      --red-soft: #fb71851a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 18px;
+      font: 15px/1.5 Inter, system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0, #12361e 0, transparent 28%),
+        radial-gradient(circle at 90% 100%, #0d2a17 0, transparent 28%),
+        var(--bg);
+    }
+    main { width: min(100%, 920px); margin: auto; }
+    .card {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: #101411ed;
+      box-shadow: 0 28px 80px #0008;
+    }
+    .auth-card { width: min(100%, 430px); margin: 7vh auto 0; }
+    .hidden { display: none !important; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 3px; font-size: 26px; }
+    h2 { font-size: 18px; }
+    .muted { color: var(--muted); }
+    .tabs { display: flex; gap: 8px; margin: 24px 0 20px; }
+    .tabs button { margin: 0; background: var(--soft); color: var(--muted); }
+    .tabs button.active { color: #041108; background: var(--green); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .panel {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #ffffff04;
+    }
+    .wide { grid-column: 1 / -1; }
+    label { display: block; margin: 14px 0 6px; color: var(--muted); }
+    input, button {
+      min-height: 46px;
+      border-radius: 11px;
+      font: inherit;
+    }
+    input {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      outline: none;
+      color: var(--text);
+      background: #050706;
+    }
+    input[type=time] {
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 46px;
+      line-height: 46px;
+    }
+    input[type=time]::-webkit-date-and-time-value {
+      min-width: 0;
+      text-align: center;
+    }
+    input:focus { border-color: var(--green); }
+    input[type=checkbox] { width: 19px; min-height: 19px; accent-color: var(--green); }
+    button {
+      padding: 0 18px;
+      border: 0;
+      color: #031107;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--green);
+    }
+    button.secondary { color: var(--text); background: var(--soft); }
+    button:disabled { opacity: .55; cursor: wait; }
+    .full { width: 100%; margin-top: 20px; }
+    .row { display: flex; gap: 12px; align-items: end; }
+    .row > * { flex: 1; }
+    .check-row { display: flex; gap: 10px; align-items: center; margin-top: 18px; }
+    .check-row label { margin: 0; color: var(--text); }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .topbar button { min-height: 38px; }
+    #logout {
+      flex: 0 0 auto;
+      min-width: 96px;
+      white-space: nowrap;
+    }
+    .notice {
+      display: none;
+      margin: 16px 0 0;
+      padding: 12px 14px;
+      border-radius: 11px;
+      white-space: pre-wrap;
+    }
+    .notice.ok { display: block; color: #86efac; background: var(--green-soft); }
+    .notice.error { display: block; color: #fda4af; background: var(--red-soft); }
+    .login-guide {
+      margin-top: 22px;
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--muted);
+      background: var(--soft);
+    }
+    .login-guide strong { color: var(--text); }
+    .login-guide ol { margin: 9px 0 0; padding-left: 20px; }
+    .login-guide li + li { margin-top: 5px; }
+    .turnstile-wrap {
+      display: grid;
+      justify-items: center;
+      margin-top: 18px;
+      min-height: 65px;
+    }
+    .turnstile-wrap.hidden {
+      min-height: 0;
+    }
+    .turnstile-tip {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 11px;
+      color: var(--muted);
+      background: var(--soft);
+    }
+    .task-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--soft);
+    }
+    .task-summary.active {
+      border-color: #22c55e66;
+      background: var(--green-soft);
+    }
+    .task-summary-title { font-weight: 700; }
+    .task-summary-detail { margin-top: 3px; color: var(--muted); }
+    .task-badge {
+      flex: 0 0 auto;
+      padding: 5px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: #ffffff0a;
+    }
+    .task-summary.active .task-badge {
+      color: #86efac;
+      background: #22c55e24;
+    }
+    .history { display: grid; gap: 8px; }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .success { color: #86efac; }
+    .failed { color: #fda4af; }
+    small { color: var(--muted); }
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+      .wide { grid-column: auto; }
+      .row { align-items: stretch; flex-direction: column; gap: 0; }
+      .topbar { align-items: flex-start; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="auth" class="card auth-card">
+      <h1>ZeppLife Steps</h1>
+      <p class="muted">直接使用 Zepp Life 账号登录</p>
+      <form id="authForm">
+        <label for="account">Zepp Life 手机号或邮箱</label>
+        <input id="account" autocomplete="username" maxlength="254" required>
+        <label for="loginPassword">Zepp Life 密码</label>
+        <input id="loginPassword" type="password" autocomplete="current-password"
+          maxlength="256" required>
+        <div id="turnstileWrap" class="turnstile-wrap hidden">
+          <div id="turnstileWidget"></div>
+          <div class="turnstile-tip">登录前请先完成人机验证</div>
+        </div>
+        <button id="authSubmit" class="full" type="submit">验证并登录</button>
+      </form>
+      <div id="authNotice" class="notice"></div>
+      <aside class="login-guide">
+        <strong>首次使用说明</strong>
+        <ol>
+          <li>先下载并安装 Zepp Life App。</li>
+          <li>在 Zepp Life App 中申请并登录账号。</li>
+          <li>进入 App 设置，绑定微信运动或支付宝运动。</li>
+          <li>使用该 Zepp Life 账号和密码登录本页面。</li>
+        </ol>
+      </aside>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <div class="topbar">
+        <div>
+          <h1>ZeppLife Steps</h1>
+          <div class="muted">Zepp 账号：<strong id="displayName"></strong></div>
+        </div>
+        <button id="logout" class="secondary">退出登录</button>
+      </div>
+
+      <div class="grid">
+        <section id="taskSummary" class="task-summary wide">
+          <div>
+            <div class="task-summary-title">当前定时任务</div>
+            <div id="taskSummaryDetail" class="task-summary-detail">正在读取...</div>
+          </div>
+          <span id="taskSummaryBadge" class="task-badge">未开启</span>
+        </section>
+
+        <section class="panel">
+          <h2>登录状态</h2>
+          <p class="muted">Zepp Life 凭据已验证，密码以 AES-256-GCM 加密保存。</p>
+          <div class="status">
+            如需更新 Zepp 密码，请退出后使用新密码重新登录。
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>定时任务</h2>
+          <div class="check-row">
+            <input id="scheduleEnabled" type="checkbox">
+            <label for="scheduleEnabled">开启每天自动提交</label>
+          </div>
+          <label for="scheduleTime">执行时间（北京时间）</label>
+          <input id="scheduleTime" type="time" value="18:18" step="60" required>
+          <div class="row">
+            <div>
+              <label for="minSteps">随机最小步数</label>
+              <input id="minSteps" type="number" min="1" max="98000"
+                step="1" value="18000" required>
+            </div>
+            <div>
+              <label for="maxSteps">随机最大步数</label>
+              <input id="maxSteps" type="number" min="1" max="98000"
+                step="1" value="26000" required>
+            </div>
+          </div>
+          <div id="scheduleStatus" class="status">尚未执行定时任务</div>
+        </section>
+
+        <section class="panel wide">
+          <button id="saveSettings">保存定时设置</button>
+          <div class="muted" id="settingsCooldown"></div>
+          <div id="settingsNotice" class="notice"></div>
+        </section>
+
+        <section class="panel">
+          <h2>手动提交</h2>
+          <label for="manualSteps">目标步数</label>
+          <input id="manualSteps" type="number" min="1" max="98000"
+            step="1" value="25000" required>
+          <button id="manualSubmit" class="full">立即提交</button>
+          <div class="muted" id="manualCooldown"></div>
+          <div id="submitNotice" class="notice"></div>
+        </section>
+
+        <section class="panel">
+          <h2>最近记录</h2>
+          <div id="history" class="history muted">暂无记录</div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    let manualCooldownUntil = 0;
+    let settingsCooldownUntil = 0;
+    let manualSubmitting = false;
+    let settingsSaving = false;
+    let turnstileSiteKey = null;
+    let turnstileWidgetId = null;
+    let turnstileToken = '';
+    let turnstileLoading = null;
+
+    function notice(element, ok, message) {
+      element.className = `notice ${ok ? 'ok' : 'error'}`;
+      element.textContent = message;
+    }
+
+    function validSteps(input, label) {
+      const value = Number(input.value);
+      if (!Number.isInteger(value) || value < 1 || value > 98000) {
+        input.setCustomValidity(`${label}需在 1～98,000 之间`);
+        input.reportValidity();
+        return null;
+      }
+      input.setCustomValidity('');
+      return value;
+    }
+
+    ['#minSteps', '#maxSteps', '#manualSteps'].forEach((selector) => {
+      $(selector).addEventListener('input', (event) => {
+        const value = Number(event.target.value);
+        event.target.setCustomValidity(
+          Number.isInteger(value) && value >= 1 && value <= 98000
+            ? ''
+            : '请输入 1～98,000 之间的整数'
+        );
+      });
+    });
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        credentials: 'same-origin',
+        ...options,
+        headers: {
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(options.headers || {})
+        }
+      });
+      const data = await response.json().catch(() => ({
+        ok: false, error: '服务器响应无效'
+      }));
+      if (!response.ok) {
+        const error = new Error(data.error || '请求失败');
+        error.retryAfter = Number(data.retry_after) || 0;
+        throw error;
+      }
+      return data;
+    }
+
+    function resetTurnstile() {
+      turnstileToken = '';
+      if (window.turnstile && turnstileWidgetId !== null) {
+        window.turnstile.reset(turnstileWidgetId);
+      }
+    }
+
+    function loadTurnstileScript() {
+      if (window.turnstile) return Promise.resolve();
+      if (turnstileLoading) return turnstileLoading;
+      turnstileLoading = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('人机验证组件加载失败，请刷新重试'));
+        document.head.appendChild(script);
+      });
+      return turnstileLoading;
+    }
+
+    async function setupTurnstile() {
+      const config = await api('/api/security');
+      turnstileSiteKey = config.turnstile?.enabled
+        ? config.turnstile.site_key
+        : null;
+      const wrap = $('#turnstileWrap');
+      if (!turnstileSiteKey) {
+        wrap.classList.add('hidden');
+        return;
+      }
+      wrap.classList.remove('hidden');
+      await loadTurnstileScript();
+      if (turnstileWidgetId === null) {
+        turnstileWidgetId = window.turnstile.render('#turnstileWidget', {
+          sitekey: turnstileSiteKey,
+          theme: 'dark',
+          callback: (token) => { turnstileToken = token; },
+          'expired-callback': () => { turnstileToken = ''; },
+          'error-callback': () => { turnstileToken = ''; }
+        });
+      }
+    }
+
+    function remainingSeconds(until) {
+      return Math.max(0, Math.ceil(until - Date.now() / 1000));
+    }
+
+    function formatCooldown(seconds) {
+      const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
+      const remaining = String(seconds % 60).padStart(2, '0');
+      return `${minutes}:${remaining}`;
+    }
+
+    function updateCooldownButtons() {
+      const manualRemaining = remainingSeconds(manualCooldownUntil);
+      const settingsRemaining = remainingSeconds(settingsCooldownUntil);
+      const manualButton = $('#manualSubmit');
+      const settingsButton = $('#saveSettings');
+
+      manualButton.disabled = manualSubmitting || manualRemaining > 0;
+      manualButton.textContent = manualSubmitting
+        ? '提交中...'
+        : manualRemaining > 0
+        ? `${formatCooldown(manualRemaining)} 后可提交`
+        : '立即提交';
+      $('#manualCooldown').textContent = manualRemaining > 0
+        ? '每次手动提交后需冷却 30 分钟'
+        : '';
+
+      settingsButton.disabled = settingsSaving || settingsRemaining > 0;
+      settingsButton.textContent = settingsSaving
+        ? '保存中...'
+        : settingsRemaining > 0
+        ? `${formatCooldown(settingsRemaining)} 后可保存`
+        : '保存定时设置';
+      $('#settingsCooldown').textContent = settingsRemaining > 0
+        ? '每次保存定时设置后需冷却 30 分钟'
+        : '';
+    }
+
+    setInterval(updateCooldownButtons, 1000);
+
+    $('#authForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = $('#authSubmit');
+      button.disabled = true;
+      try {
+        await setupTurnstile();
+        if (turnstileSiteKey && !turnstileToken) {
+          throw new Error('请先完成人机验证');
+        }
+        await api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            account: $('#account').value.trim(),
+            password: $('#loginPassword').value,
+            turnstileToken
+          })
+        });
+        $('#loginPassword').value = '';
+        resetTurnstile();
+        await loadDashboard();
+      } catch (error) {
+        notice($('#authNotice'), false, error.message);
+        resetTurnstile();
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    async function loadDashboard() {
+      try {
+        const data = await api('/api/me');
+        $('#auth').classList.add('hidden');
+        $('#dashboard').classList.remove('hidden');
+        $('#displayName').textContent = data.user.zepp_account;
+        const profile = data.profile || {};
+        manualCooldownUntil = Number(profile.manual_cooldown_until) || 0;
+        settingsCooldownUntil = Number(profile.settings_cooldown_until) || 0;
+        $('#scheduleEnabled').checked = Boolean(profile.schedule_enabled);
+        const hour = String(profile.schedule_hour ?? 18).padStart(2, '0');
+        const minute = String(profile.schedule_minute ?? 18).padStart(2, '0');
+        $('#scheduleTime').value = `${hour}:${minute}`;
+        $('#minSteps').value = profile.min_steps ?? 18000;
+        $('#maxSteps').value = profile.max_steps ?? 26000;
+        $('#scheduleStatus').textContent = profile.last_run_date
+          ? `${profile.last_run_date}：${profile.last_message || profile.last_status}`
+          : '尚未执行定时任务';
+        renderTaskSummary(profile);
+        renderHistory(data.history || []);
+        updateCooldownButtons();
+      } catch {
+        $('#dashboard').classList.add('hidden');
+        $('#auth').classList.remove('hidden');
+        setupTurnstile().catch((error) => {
+          notice($('#authNotice'), false, error.message);
+        });
+      }
+    }
+
+    function renderTaskSummary(profile) {
+      const summary = $('#taskSummary');
+      const detail = $('#taskSummaryDetail');
+      const badge = $('#taskSummaryBadge');
+      const enabled = Boolean(profile.schedule_enabled);
+      summary.classList.toggle('active', enabled);
+      badge.textContent = enabled ? '已开启' : '未开启';
+      if (!enabled) {
+        detail.textContent = '当前没有启用自动提交任务';
+        return;
+      }
+      const hour = String(profile.schedule_hour ?? 0).padStart(2, '0');
+      const minute = String(profile.schedule_minute ?? 0).padStart(2, '0');
+      const minimum = Number(profile.min_steps || 0).toLocaleString();
+      const maximum = Number(profile.max_steps || 0).toLocaleString();
+      const lastRun = profile.last_run_date
+        ? ` · 最近：${profile.last_run_date} ${profile.last_message || ''}`
+        : ' · 尚未执行';
+      detail.textContent =
+        `每天北京时间 ${hour}:${minute}，随机 ${minimum}～${maximum} 步${lastRun}`;
+    }
+
+    $('#saveSettings').onclick = async () => {
+      const button = $('#saveSettings');
+      if (remainingSeconds(settingsCooldownUntil) > 0) {
+        updateCooldownButtons();
+        return;
+      }
+      settingsSaving = true;
+      updateCooldownButtons();
+      try {
+        const minSteps = validSteps($('#minSteps'), '随机最小步数');
+        const maxSteps = validSteps($('#maxSteps'), '随机最大步数');
+        if (minSteps === null || maxSteps === null) return;
+        if (minSteps > maxSteps) {
+          $('#maxSteps').setCustomValidity('随机最大步数不能小于最小步数');
+          $('#maxSteps').reportValidity();
+          return;
+        }
+        $('#maxSteps').setCustomValidity('');
+        const [scheduleHour, scheduleMinute] = $('#scheduleTime').value
+          .split(':')
+          .map(Number);
+        if (
+          !Number.isInteger(scheduleHour) ||
+          !Number.isInteger(scheduleMinute) ||
+          scheduleHour < 0 ||
+          scheduleHour > 23 ||
+          scheduleMinute < 0 ||
+          scheduleMinute > 59
+        ) {
+          throw new Error('请选择有效的执行时间');
+        }
+        const result = await api('/api/settings', {
+          method: 'PUT',
+          body: JSON.stringify({
+            scheduleEnabled: $('#scheduleEnabled').checked,
+            scheduleHour,
+            scheduleMinute,
+            minSteps,
+            maxSteps
+          })
+        });
+        settingsCooldownUntil = Number(result.cooldown_until) || 0;
+        notice($('#settingsNotice'), true, '设置已保存');
+        await loadDashboard();
+      } catch (error) {
+        if (error.retryAfter) {
+          settingsCooldownUntil = Date.now() / 1000 + error.retryAfter;
+        }
+        notice($('#settingsNotice'), false, error.message);
+      } finally {
+        settingsSaving = false;
+        updateCooldownButtons();
+      }
+    };
+
+    $('#manualSubmit').onclick = async () => {
+      const button = $('#manualSubmit');
+      if (remainingSeconds(manualCooldownUntil) > 0) {
+        updateCooldownButtons();
+        return;
+      }
+      manualSubmitting = true;
+      manualCooldownUntil = Date.now() / 1000 + 30 * 60;
+      updateCooldownButtons();
+      try {
+        const steps = validSteps($('#manualSteps'), '手动提交步数');
+        if (steps === null) return;
+        const data = await api('/api/submit', {
+          method: 'POST',
+          body: JSON.stringify({ steps })
+        });
+        manualCooldownUntil = Number(data.cooldown_until) || 0;
+        notice(
+          $('#submitNotice'),
+          true,
+          `提交成功：${data.steps.toLocaleString()} 步\n日期：${data.date}`
+        );
+        await loadDashboard();
+      } catch (error) {
+        if (error.retryAfter) {
+          manualCooldownUntil = Date.now() / 1000 + error.retryAfter;
+        }
+        notice($('#submitNotice'), false, error.message);
+      } finally {
+        manualSubmitting = false;
+        updateCooldownButtons();
+      }
+    };
+
+    $('#logout').onclick = async () => {
+      await api('/api/logout', { method: 'POST', body: '{}' }).catch(() => {});
+      $('#dashboard').classList.add('hidden');
+      $('#auth').classList.remove('hidden');
+      setupTurnstile().catch((error) => {
+        notice($('#authNotice'), false, error.message);
+      });
+    };
+
+    function renderHistory(items) {
+      const container = $('#history');
+      if (!items.length) {
+        container.className = 'history muted';
+        container.textContent = '暂无记录';
+        return;
+      }
+      container.className = 'history';
+      container.replaceChildren(...items.map((item) => {
+        const row = document.createElement('div');
+        row.className = 'history-item';
+        const left = document.createElement('div');
+        const title = document.createElement('div');
+        title.textContent = `${Number(item.steps).toLocaleString()} 步`;
+        title.className = item.status;
+        const detail = document.createElement('small');
+        detail.textContent = `${item.trigger_type === 'scheduled' ? '定时' : '手动'} · ${
+          new Date(item.created_at * 1000).toLocaleString('zh-CN', { hour12: false })
+        }`;
+        left.append(title, detail);
+        const state = document.createElement('span');
+        state.className = item.status;
+        state.textContent = item.status === 'success' ? '成功' : '失败';
+        row.append(left, state);
+        return row;
+      }));
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

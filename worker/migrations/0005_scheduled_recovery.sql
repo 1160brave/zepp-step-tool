@@ -1,0 +1,1 @@
+ALTER TABLE profiles ADD COLUMN last_run_started_at INTEGER NOT NULL DEFAULT 0;
