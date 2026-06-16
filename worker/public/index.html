@@ -173,6 +173,35 @@
       font-size: 13px;
       text-align: center;
     }
+    .captcha-wrap {
+      margin-top: 18px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #050706;
+    }
+    .captcha-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .captcha-refresh {
+      min-height: 30px;
+      padding: 0 10px;
+      color: var(--text);
+      font-size: 13px;
+      background: var(--soft);
+    }
+    .captcha-question {
+      margin: 10px 0 8px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+    }
     .status {
       margin-top: 15px;
       padding: 12px;
@@ -251,6 +280,15 @@
         <div id="turnstileWrap" class="turnstile-wrap hidden">
           <div id="turnstileWidget"></div>
           <div class="turnstile-tip">登录前请先完成人机验证</div>
+        </div>
+        <div id="captchaWrap" class="captcha-wrap hidden">
+          <div class="captcha-head">
+            <span>当前网络无法完成 Cloudflare 验证，已切换为本地验证</span>
+            <button id="captchaRefresh" class="captcha-refresh" type="button">换一题</button>
+          </div>
+          <div id="captchaQuestion" class="captcha-question">正在生成...</div>
+          <input id="captchaAnswer" inputmode="numeric" pattern="[0-9]*"
+            autocomplete="off" placeholder="请输入答案">
         </div>
         <button id="authSubmit" class="full" type="submit">验证并登录</button>
       </form>
@@ -354,6 +392,8 @@
     let turnstileWidgetId = null;
     let turnstileToken = '';
     let turnstileLoading = null;
+    let localCaptcha = null;
+    let useLocalCaptcha = false;
 
     function notice(element, ok, message) {
       element.className = `notice ${ok ? 'ok' : 'error'}`;
@@ -414,14 +454,37 @@
       if (turnstileLoading) return turnstileLoading;
       turnstileLoading = new Promise((resolve, reject) => {
         const script = document.createElement('script');
+        const timer = setTimeout(() => {
+          reject(new Error('Cloudflare 人机验证加载超时'));
+        }, 7000);
         script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
         script.async = true;
         script.defer = true;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error('人机验证组件加载失败，请刷新重试'));
+        script.onload = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+        script.onerror = () => {
+          clearTimeout(timer);
+          reject(new Error('Cloudflare 人机验证组件加载失败'));
+        };
         document.head.appendChild(script);
       });
       return turnstileLoading;
+    }
+
+    async function setupLocalCaptcha(message) {
+      useLocalCaptcha = true;
+      turnstileToken = '';
+      $('#turnstileWrap').classList.add('hidden');
+      $('#captchaWrap').classList.remove('hidden');
+      const data = await api('/api/captcha');
+      localCaptcha = data.captcha;
+      $('#captchaQuestion').textContent = localCaptcha.question;
+      $('#captchaAnswer').value = '';
+      if (message) {
+        notice($('#authNotice'), false, message);
+      }
     }
 
     async function setupTurnstile() {
@@ -432,10 +495,17 @@
       const wrap = $('#turnstileWrap');
       if (!turnstileSiteKey) {
         wrap.classList.add('hidden');
+        await setupLocalCaptcha();
         return;
       }
       wrap.classList.remove('hidden');
-      await loadTurnstileScript();
+      $('#captchaWrap').classList.add('hidden');
+      try {
+        await loadTurnstileScript();
+      } catch (error) {
+        await setupLocalCaptcha('国内网络连接 Cloudflare 验证失败，请使用本地验证');
+        return;
+      }
       if (turnstileWidgetId === null) {
         const compact = window.matchMedia('(max-width: 430px)').matches;
         $('#turnstileWidget').classList.toggle('compact', compact);
@@ -447,11 +517,15 @@
           'expired-callback': () => { turnstileToken = ''; },
           'error-callback': () => {
             turnstileToken = '';
-            notice($('#authNotice'), false, '人机验证失败，请刷新页面后重试');
+            setupLocalCaptcha('Cloudflare 验证失败，请使用本地验证').catch((error) => {
+              notice($('#authNotice'), false, error.message);
+            });
           },
           'timeout-callback': () => {
             turnstileToken = '';
-            notice($('#authNotice'), false, '人机验证超时，请刷新页面后重试');
+            setupLocalCaptcha('Cloudflare 验证超时，请使用本地验证').catch((error) => {
+              notice($('#authNotice'), false, error.message);
+            });
           }
         });
       }
@@ -502,27 +576,44 @@
       button.disabled = true;
       try {
         await setupTurnstile();
-        if (turnstileSiteKey && !turnstileToken) {
-          throw new Error('请先完成人机验证');
+        const body = {
+          account: $('#account').value.trim(),
+          password: $('#loginPassword').value
+        };
+        if (useLocalCaptcha) {
+          if (!localCaptcha?.token || !$('#captchaAnswer').value.trim()) {
+            throw new Error('请输入本地验证码答案');
+          }
+          body.captchaToken = localCaptcha.token;
+          body.captchaAnswer = $('#captchaAnswer').value.trim();
+        } else if (turnstileSiteKey && !turnstileToken) {
+          await setupLocalCaptcha('Cloudflare 验证未完成，请使用本地验证');
+          throw new Error('请完成本地验证后再登录');
         }
         await api('/api/auth/login', {
           method: 'POST',
-          body: JSON.stringify({
-            account: $('#account').value.trim(),
-            password: $('#loginPassword').value,
-            turnstileToken
-          })
+          body: JSON.stringify(useLocalCaptcha ? body : { ...body, turnstileToken })
         });
         $('#loginPassword').value = '';
+        $('#captchaAnswer').value = '';
         resetTurnstile();
         await loadDashboard();
       } catch (error) {
         notice($('#authNotice'), false, error.message);
+        if (useLocalCaptcha) {
+          setupLocalCaptcha().catch(() => {});
+        }
         resetTurnstile();
       } finally {
         button.disabled = false;
       }
     });
+
+    $('#captchaRefresh').onclick = () => {
+      setupLocalCaptcha().catch((error) => {
+        notice($('#authNotice'), false, error.message);
+      });
+    };
 
     async function loadDashboard() {
       try {

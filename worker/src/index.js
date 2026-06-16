@@ -79,6 +79,30 @@ function randomBase64(length) {
   return bytesToBase64(bytes);
 }
 
+function randomBase64Url(length) {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytesToBase64(bytes)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function bytesToBase64Url(bytes) {
+  return bytesToBase64(bytes)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlToBytes(value) {
+  const base64 = String(value || "")
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(String(value || "").length / 4) * 4, "=");
+  return base64ToBytes(base64);
+}
+
 async function sha256(value) {
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
   return bytesToBase64(new Uint8Array(digest));
@@ -96,6 +120,45 @@ async function credentialKey(env) {
     "encrypt",
     "decrypt"
   ]);
+}
+
+async function signingKey(env) {
+  if (!env.CREDENTIAL_ENCRYPTION_KEY) {
+    throw new AppError("服务缺少签名密钥", 500);
+  }
+  const raw = base64ToBytes(env.CREDENTIAL_ENCRYPTION_KEY);
+  if (raw.length !== 32) {
+    throw new AppError("签名密钥格式无效", 500);
+  }
+  return crypto.subtle.importKey(
+    "raw",
+    raw,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+}
+
+async function signValue(env, value) {
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    await signingKey(env),
+    encoder.encode(value)
+  );
+  return bytesToBase64Url(new Uint8Array(signature));
+}
+
+async function verifySignature(env, value, signature) {
+  try {
+    return await crypto.subtle.verify(
+      "HMAC",
+      await signingKey(env),
+      base64UrlToBytes(signature),
+      encoder.encode(value)
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function encryptCredential(value, env) {
@@ -170,6 +233,51 @@ function turnstileConfigured(env) {
   return Boolean(env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY);
 }
 
+async function createLocalCaptcha(env) {
+  const left = 10 + Math.floor(Math.random() * 40);
+  const right = 1 + Math.floor(Math.random() * 30);
+  const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+  const nonce = randomBase64Url(12);
+  const payload = `${left}.${right}.${expiresAt}.${nonce}`;
+  const signature = await signValue(env, payload);
+  return {
+    question: `${left} + ${right} = ?`,
+    token: `${payload}.${signature}`,
+    expires_at: expiresAt
+  };
+}
+
+async function verifyLocalCaptcha(env, token, answer) {
+  const parts = String(token || "").split(".");
+  if (parts.length !== 5) {
+    throw new AppError("本地验证码无效，请刷新后重试");
+  }
+  const [leftValue, rightValue, expiresValue, nonce, signature] = parts;
+  const left = Number(leftValue);
+  const right = Number(rightValue);
+  const expiresAt = Number(expiresValue);
+  const submitted = Number(answer);
+  if (
+    !Number.isInteger(left) ||
+    !Number.isInteger(right) ||
+    !Number.isInteger(expiresAt) ||
+    !Number.isInteger(submitted) ||
+    !nonce
+  ) {
+    throw new AppError("本地验证码无效，请刷新后重试");
+  }
+  if (expiresAt < Math.floor(Date.now() / 1000)) {
+    throw new AppError("本地验证码已过期，请刷新后重试");
+  }
+  const payload = `${left}.${right}.${expiresAt}.${nonce}`;
+  if (!(await verifySignature(env, payload, signature))) {
+    throw new AppError("本地验证码签名无效，请刷新后重试", 403);
+  }
+  if (submitted !== left + right) {
+    throw new AppError("本地验证码答案错误");
+  }
+}
+
 async function verifyTurnstile(request, env, token) {
   if (!env.TURNSTILE_SITE_KEY && !env.TURNSTILE_SECRET_KEY) return;
   if (!env.TURNSTILE_SITE_KEY || !env.TURNSTILE_SECRET_KEY) {
@@ -214,6 +322,14 @@ async function verifyTurnstile(request, env, token) {
   if (hostname && !allowedHostnames.has(hostname)) {
     throw new AppError("人机验证来源无效", 403);
   }
+}
+
+async function verifyLoginChallenge(request, env, data) {
+  if (data.captchaToken || data.captchaAnswer) {
+    await verifyLocalCaptcha(env, data.captchaToken, data.captchaAnswer);
+    return;
+  }
+  await verifyTurnstile(request, env, data.turnstileToken);
 }
 
 async function currentUser(request, env, required = true) {
@@ -510,7 +626,7 @@ async function recordSubmission(env, userId, triggerType, steps, status, message
 async function handleLogin(request, env) {
   await enforceRateLimit(request, env, "/api/auth/login", 8, 15 * 60);
   const data = await parseJson(request);
-  await verifyTurnstile(request, env, data.turnstileToken);
+  await verifyLoginChallenge(request, env, data);
   const account = String(data.account || "").trim();
   const password = String(data.password || "");
   if (!account || account.length > 254) {
@@ -575,6 +691,11 @@ async function handleApi(request, env) {
         site_key: env.TURNSTILE_SITE_KEY || null
       }
     });
+  }
+
+  if (request.method === "GET" && pathname === "/api/captcha") {
+    await enforceRateLimit(request, env, "/api/captcha", 30, 60);
+    return json({ ok: true, captcha: await createLocalCaptcha(env) });
   }
 
   if (request.method === "POST" && pathname === "/api/logout") {
