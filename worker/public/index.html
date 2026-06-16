@@ -249,6 +249,32 @@
     .success { color: #86efac; }
     .failed { color: #fda4af; }
     small { color: var(--muted); }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: #000a;
+      backdrop-filter: blur(8px);
+    }
+    .modal {
+      width: min(100%, 430px);
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #101411;
+      box-shadow: 0 24px 70px #000b;
+    }
+    .modal h2 { margin-bottom: 10px; }
+    .modal p { color: var(--muted); }
+    .modal ul {
+      margin: 12px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+    .modal li + li { margin-top: 6px; }
     @media (max-width: 700px) {
       .grid { grid-template-columns: 1fr; }
       .wide { grid-column: auto; }
@@ -382,6 +408,23 @@
     </section>
   </main>
 
+  <div id="noticeModal" class="modal-backdrop hidden" role="dialog"
+    aria-modal="true" aria-labelledby="noticeTitle">
+    <div class="modal">
+      <h2 id="noticeTitle">使用公告</h2>
+      <p>
+        本网页部署在 Cloudflare Workers 上，为了保证服务稳定和账号安全，
+        已对部分请求做了限制。
+      </p>
+      <ul>
+        <li>手动提交和保存定时设置都有 30 分钟冷却。</li>
+        <li>登录、验证码、提交等接口设置了频率限制。</li>
+        <li>请求过于频繁时，请稍后再试，不要连续刷新或重复点击。</li>
+      </ul>
+      <button id="noticeClose" class="full" type="button">我知道了</button>
+    </div>
+  </div>
+
   <script>
     const $ = (selector) => document.querySelector(selector);
     let manualCooldownUntil = 0;
@@ -395,6 +438,7 @@
     let localCaptcha = null;
     let useLocalCaptcha = false;
     let captchaLoading = false;
+    const noticeStorageKey = 'zepp_notice_v1';
 
     function notice(element, ok, message) {
       element.className = `notice ${ok ? 'ok' : 'error'}`;
@@ -642,6 +686,16 @@
       window.scrollTo(0, 0);
     }
 
+    function showLoginNotice() {
+      if (localStorage.getItem(noticeStorageKey) === 'seen') return;
+      $('#noticeModal').classList.remove('hidden');
+    }
+
+    $('#noticeClose').onclick = () => {
+      localStorage.setItem(noticeStorageKey, 'seen');
+      $('#noticeModal').classList.add('hidden');
+    };
+
     async function loadDashboard() {
       try {
         const data = await api('/api/me');
@@ -663,6 +717,7 @@
         renderTaskSummary(profile);
         renderHistory(data.history || []);
         updateCooldownButtons();
+        showLoginNotice();
       } catch {
         $('#dashboard').classList.add('hidden');
         $('#auth').classList.remove('hidden');
