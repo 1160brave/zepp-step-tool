@@ -394,6 +394,7 @@
     let turnstileLoading = null;
     let localCaptcha = null;
     let useLocalCaptcha = false;
+    let captchaLoading = false;
 
     function notice(element, ok, message) {
       element.className = `notice ${ok ? 'ok' : 'error'}`;
@@ -474,16 +475,27 @@
     }
 
     async function setupLocalCaptcha(message) {
+      if (captchaLoading) return;
+      captchaLoading = true;
+      const refreshButton = $('#captchaRefresh');
+      refreshButton.disabled = true;
+      refreshButton.textContent = '生成中...';
       useLocalCaptcha = true;
       turnstileToken = '';
       $('#turnstileWrap').classList.add('hidden');
       $('#captchaWrap').classList.remove('hidden');
-      const data = await api('/api/captcha');
-      localCaptcha = data.captcha;
-      $('#captchaQuestion').textContent = localCaptcha.question;
-      $('#captchaAnswer').value = '';
-      if (message) {
-        notice($('#authNotice'), false, message);
+      try {
+        const data = await api('/api/captcha');
+        localCaptcha = data.captcha;
+        $('#captchaQuestion').textContent = localCaptcha.question;
+        $('#captchaAnswer').value = '';
+        if (message) {
+          notice($('#authNotice'), false, message);
+        }
+      } finally {
+        captchaLoading = false;
+        refreshButton.disabled = false;
+        refreshButton.textContent = '换一题';
       }
     }
 
