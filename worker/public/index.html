@@ -184,15 +184,23 @@
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      align-items: center;
+      align-items: flex-start;
       color: var(--muted);
       font-size: 13px;
     }
+    .captcha-head span {
+      flex: 1;
+      min-width: 0;
+    }
     .captcha-refresh {
+      flex: 0 0 auto;
+      min-width: 74px;
       min-height: 30px;
-      padding: 0 10px;
+      padding: 0 12px;
       color: var(--text);
       font-size: 13px;
+      line-height: 30px;
+      white-space: nowrap;
       background: var(--soft);
     }
     .captcha-question {
@@ -281,6 +289,7 @@
       .row { align-items: stretch; flex-direction: column; gap: 0; }
       .topbar { align-items: flex-start; }
       .card { padding: 20px; }
+      .captcha-head { align-items: center; }
     }
     @media (max-width: 430px) {
       .turnstile-wrap {
@@ -309,7 +318,7 @@
         </div>
         <div id="captchaWrap" class="captcha-wrap hidden">
           <div class="captcha-head">
-            <span>当前网络无法完成 Cloudflare 验证，已切换为本地验证</span>
+            <span>Cloudflare 验证不可用，已切换为本地验证</span>
             <button id="captchaRefresh" class="captcha-refresh" type="button">换一题</button>
           </div>
           <div id="captchaQuestion" class="captcha-question">正在生成...</div>
