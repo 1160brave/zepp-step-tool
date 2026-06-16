@@ -5,7 +5,7 @@
   "compatibility_date": "2026-06-15",
   "workers_dev": true,
   "vars": {
-    "TURNSTILE_SITE_KEY": ""
+    "TURNSTILE_SITE_KEY": "0x4AAAAAADldWlo6diGJGxzl"
   },
   "assets": {
     "directory": "./public",
