@@ -283,6 +283,46 @@
       color: var(--muted);
     }
     .modal li + li { margin-top: 6px; }
+    .global-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: #000b;
+      backdrop-filter: blur(8px);
+    }
+    .loading-card {
+      width: min(100%, 260px);
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      text-align: center;
+      background: #101411;
+      box-shadow: 0 24px 70px #000b;
+    }
+    .spinner {
+      width: 38px;
+      height: 38px;
+      margin: 0 auto 14px;
+      border: 4px solid #ffffff22;
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    .loading-title {
+      color: var(--text);
+      font-weight: 700;
+    }
+    .loading-text {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
     @media (max-width: 700px) {
       .grid { grid-template-columns: 1fr; }
       .wide { grid-column: auto; }
@@ -431,6 +471,15 @@
         <li>请求过于频繁时，请稍后再试，不要连续刷新或重复点击。</li>
       </ul>
       <button id="noticeClose" class="full" type="button">我知道了</button>
+    </div>
+  </div>
+
+  <div id="globalLoading" class="global-loading hidden" role="status"
+    aria-live="polite">
+    <div class="loading-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div id="loadingTitle" class="loading-title">正在登录</div>
+      <div id="loadingText" class="loading-text">请稍候，不要重复点击</div>
     </div>
   </div>
 
@@ -635,10 +684,21 @@
 
     setInterval(updateCooldownButtons, 1000);
 
+    function showGlobalLoading(title = '正在登录', text = '请稍候，不要重复点击') {
+      $('#loadingTitle').textContent = title;
+      $('#loadingText').textContent = text;
+      $('#globalLoading').classList.remove('hidden');
+    }
+
+    function hideGlobalLoading() {
+      $('#globalLoading').classList.add('hidden');
+    }
+
     $('#authForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       const button = $('#authSubmit');
       button.disabled = true;
+      showGlobalLoading();
       try {
         await setupTurnstile();
         const body = {
@@ -662,9 +722,11 @@
         $('#loginPassword').value = '';
         $('#captchaAnswer').value = '';
         resetTurnstile();
+        showGlobalLoading('登录成功', '正在进入控制台...');
         showDashboardLoading(result.account || body.account);
         await loadDashboard();
       } catch (error) {
+        hideGlobalLoading();
         notice($('#authNotice'), false, error.message);
         if (useLocalCaptcha) {
           setupLocalCaptcha().catch(() => {});
@@ -672,6 +734,7 @@
         resetTurnstile();
       } finally {
         button.disabled = false;
+        hideGlobalLoading();
       }
     });
 
