@@ -245,7 +245,13 @@
       color: #86efac;
       background: #22c55e24;
     }
-    .history { display: grid; gap: 8px; }
+    .history {
+      display: grid;
+      gap: 8px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
     .history-item {
       display: flex;
       justify-content: space-between;
@@ -253,6 +259,20 @@
       padding: 11px 13px;
       border: 1px solid var(--line);
       border-radius: 10px;
+    }
+    .history-main {
+      min-width: 0;
+    }
+    .history-title,
+    .history-detail {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .history-state {
+      flex: 0 0 auto;
     }
     .success { color: #86efac; }
     .failed { color: #fda4af; }
@@ -931,16 +951,18 @@
         const row = document.createElement('div');
         row.className = 'history-item';
         const left = document.createElement('div');
+        left.className = 'history-main';
         const title = document.createElement('div');
         title.textContent = `${Number(item.steps).toLocaleString()} 步`;
-        title.className = item.status;
+        title.className = `history-title ${item.status}`;
         const detail = document.createElement('small');
+        detail.className = 'history-detail';
         detail.textContent = `${item.trigger_type === 'scheduled' ? '定时' : '手动'} · ${
           new Date(item.created_at * 1000).toLocaleString('zh-CN', { hour12: false })
         }`;
         left.append(title, detail);
         const state = document.createElement('span');
-        state.className = item.status;
+        state.className = `history-state ${item.status}`;
         state.textContent = item.status === 'success' ? '成功' : '失败';
         row.append(left, state);
         return row;
