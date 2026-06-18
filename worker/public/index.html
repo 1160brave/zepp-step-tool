@@ -958,7 +958,10 @@
         const detail = document.createElement('small');
         detail.className = 'history-detail';
         detail.textContent = `${item.trigger_type === 'scheduled' ? '定时' : '手动'} · ${
-          new Date(item.created_at * 1000).toLocaleString('zh-CN', { hour12: false })
+          new Date(item.created_at * 1000).toLocaleString('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+            hour12: false
+          })
         }`;
         left.append(title, detail);
         const state = document.createElement('span');
